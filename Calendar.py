@@ -128,12 +128,13 @@ def command_add(date, start_time, end_time, title, calendar):
     """
 
     # YOUR CODE GOES HERE
-    calendar = {}
-    event = [date + " ", start_time + " ", end_time + " ", title]
-    with open(FILENAME, "a") as file:
-        for n in event:
-            file.write(n)
-        file.write("\n")
+    if date in calendar:
+        return False
+    else:
+        calendar[date] = {'start': start_time, 'end': end_time, 'title': title}
+        save_calendar(calendar)
+        print("Event added!")
+        return True
 
 def command_show(calendar):
     r"""
@@ -163,11 +164,10 @@ def command_show(calendar):
     "\n2018-05-06 : \n    start : 19:00,\n    end : 23:00,\n    title : Sid's birthday\n2018-02-10 : \n    start : 12:00,\n    end : 23:00,\n    title : Change oil in blue car\n\n    start : 20:00,\n    end : 22:00,\n    title : dinner with Jane\n2018-01-15 : \n    start : 08:00,\n    end : 09:00,\n    title : lunch with sid\n\n    start : 11:00,\n    end : 13:00,\n    title : Eye doctor\n2017-12-22 : \n    start : 05:00,\n    end : 08:00,\n    title : Fix tree near front walkway\n\n    start : 13:00,\n    end : 15:00,\n    title : Get salad stuff"
     """
 
-    student = []
-    with open(FILENAME, "r") as file:
-        for line in file:
-            line = line.replace("\n", "")
-            student.append(line)
+    for x, y in calendar.items():
+        print(x, ":")
+        for z in y:
+            print("\t" + z + " :", y[z])
 
 
 def command_delete(date, start_time, calendar):
@@ -223,7 +223,17 @@ def command_delete(date, start_time, calendar):
     """
 
     # YOUR CODE GOES HERE
-    pass
+    if date in calendar:
+        for x in calendar[date].copy():
+            if calendar[date][x] == start_time:
+                del calendar[date]
+                save_calendar(calendar)
+                print("Event deleted!")
+                return True
+            else:
+                return "There is no event with start time of " + start_time + " on date " + date + " in the calendar"
+    else:
+        return date + " is not a date in the calendar"
 
 
 # -----------------------------------------------------------------------------
@@ -284,7 +294,15 @@ def save_calendar(calendar):
     return: True if the calendar was saved.
     """
     # YOUR CODE GOES HERE
-    pass
+    os.remove(FILENAME)
+    for x, y in calendar.items():
+        input = x
+        for z in y:
+            input += " " + y[z]
+        with open(FILENAME, "a") as file:
+            file.write(input)
+            file.write("\n")
+    print("Calendar saved!")
 
 
 def load_calendar():
@@ -299,7 +317,14 @@ def load_calendar():
     '''
 
     # YOUR CODE GOES HERE
-    pass
+    calendar_temp = {}
+    with open(FILENAME, "r") as file:
+        for line in file:
+            line = line.replace("\n", "")
+            line = line.split(" ", 1)
+            detail = line[1].split(" ", 2)
+            calendar_temp[line[0]] = {'start': detail[0], 'end': detail[1], 'title': detail[2]}
+    return calendar_temp
 
 # -----------------------------------------------------------------------------
 # Functions dealing with parsing commands
@@ -327,7 +352,12 @@ def is_command(command):
     '''
 
     # YOUR CODE GOES HERE
-    pass
+    string = command.split()
+    cmd = string[0]
+    if cmd in ['add', 'delete', 'quit', 'help', 'show']:
+        return True
+    else:
+        return False
 
 
 def is_calendar_date(date):
@@ -373,7 +403,19 @@ def is_calendar_date(date):
     # 0123456789
 
     # YOUR CODE GOES HERE
-    pass
+    date_data = date.split("-", 3)
+    year = date_data[0]
+    month = date_data[1]
+    day = date_data[2]
+    year_check = is_natural_number(year)
+    month_check = is_natural_number(month)
+    day_check = is_natural_number(day)
+    if (year_check and month_check and day_check) is True:
+        if len(list(year)) == 4 and len(list(month)) == 2 and len(list(day)) == 2:
+            if (int(month) in [1, 3, 5, 7, 8, 10, 12] and (1 <= int(day) <= 31)) or (
+                    int(month) in [2, 4, 6, 9, 11] and (1 <= int(day) <= 30)):
+                return True
+    return False
 
 
 def is_natural_number(str):
@@ -406,7 +448,13 @@ def is_natural_number(str):
     # Check that all characters are in ["0123456789"]
 
     # YOUR CODE GOES HERE
-    pass
+    char = list(str)
+    for i in char:
+        if 48 <= ord(i) <= 57:
+            continue
+        else:
+            return False
+    return True
 
 
 def parse_command(line):
@@ -467,7 +515,62 @@ def parse_command(line):
     # HINT: You can first split, then join back the parts of
     # the final argument.
     # YOUR CODE GOES HERE
-    pass
+    string = line.split(" ", 4)
+    command = string[0]
+    check = is_command(command)
+
+    if check is True:
+        if command == "add":
+            if len(string) == 5:
+                date = string[1]
+                start_time = string[2]
+                end_time = string[3]
+                title = string[4]
+                date_check = is_calendar_date(date)
+                start_check = is_natural_number(start_time)
+                end_check = is_natural_number(end_time)
+                if date_check is True:
+                    if (0 <= int(start_time) <= 24) and (0 <= int(end_time) <= 24) and (
+                            int(start_time) <= int(end_time)) and (start_check and end_check) is True:
+                        return ['add', date, start_time, end_time, title]
+                    else:
+                        return ['error', 'not a valid event start time']
+                else:
+                    return ['error', 'not a valid calendar date']
+            else:
+                return ['error', 'add DATE START_TIME END_TIME DETAILS']
+        elif command == "delete":
+            if len(string) == 3:
+                date = string[1]
+                start_time = string[2]
+                date_check = is_calendar_date(date)
+                start_check = is_natural_number(start_time)
+                if date_check is True:
+                    if 0 <= int(start_time) <= 24 and start_check is True:
+                        return ['delete', date, start_time]
+                    else:
+                        return ['error', 'not a valid event start time']
+                else:
+                    return ['error', 'not a valid calendar date']
+            else:
+                return ['error', 'delete DATE START_TIME']
+        elif command == "quit":
+            if len(string) == 1:
+                return ['quit']
+            else:
+                return ['error', 'show']
+        elif command == "help":
+            if len(string) == 1:
+                return ['help']
+            else:
+                return ['error', 'help']
+        elif command == "show":
+            if len(string) == 1:
+                return ['show']
+            else:
+                return ['error', 'show']
+    else:
+        return ['help']
 
 if __name__ == "__main__":
     import doctest
